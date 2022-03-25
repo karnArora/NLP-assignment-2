@@ -1,0 +1,527 @@
+{
+  "cells": [
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "Sz_j00K2kQfG"
+      },
+      "outputs": [],
+      "source": [
+        "from gensim.models import LdaMulticore,TfidfModel\n",
+        "from gensim.corpora import Dictionary\n",
+        "import pandas as pd \n",
+        "import matplotlib.pyplot as plt \n",
+        "from google.colab import drive\n",
+        "import seaborn as sns \n",
+        "from wordcloud import WordCloud\n",
+        "import re \n",
+        "from nltk.corpus import stopwords\n",
+        "from string import punctuation\n",
+        "import nltk\n",
+        "from nltk.stem import WordNetLemmatizer"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "f_HSlrsqlcfc",
+        "outputId": "4018251e-0a05-4335-cc2d-32951f1d1d2a"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "Mounted at /content/drive\n"
+          ]
+        }
+      ],
+      "source": [
+        "from google.colab import drive\n",
+        "drive.mount('/content/drive')"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "dGZqF7HMrFyp",
+        "outputId": "e6d46730-d371-491c-9499-72f4bf2bc164"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "[nltk_data] Downloading package stopwords to /root/nltk_data...\n",
+            "[nltk_data]   Unzipping corpora/stopwords.zip.\n",
+            "[nltk_data] Downloading package wordnet to /root/nltk_data...\n",
+            "[nltk_data]   Unzipping corpora/wordnet.zip.\n"
+          ]
+        },
+        {
+          "data": {
+            "text/plain": [
+              "True"
+            ]
+          },
+          "execution_count": 3,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "nltk.download('stopwords')\n",
+        "nltk.download('wordnet')"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 250
+        },
+        "id": "51q8UjNclgmb",
+        "outputId": "9f651f55-2aed-4bf2-e575-5de48aa20de7"
+      },
+      "outputs": [
+        {
+          "data": {
+            "text/html": [
+              "\n",
+              "  <div id=\"df-519d686e-af7a-45b8-a809-21602476af0f\">\n",
+              "    <div class=\"colab-df-container\">\n",
+              "      <div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>id</th>\n",
+              "      <th>year</th>\n",
+              "      <th>title</th>\n",
+              "      <th>event_type</th>\n",
+              "      <th>pdf_name</th>\n",
+              "      <th>abstract</th>\n",
+              "      <th>paper_text</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>1</td>\n",
+              "      <td>1987</td>\n",
+              "      <td>Self-Organization of Associative Database and ...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>1-self-organization-of-associative-database-an...</td>\n",
+              "      <td>Abstract Missing</td>\n",
+              "      <td>767\\n\\nSELF-ORGANIZATION OF ASSOCIATIVE DATABA...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>10</td>\n",
+              "      <td>1987</td>\n",
+              "      <td>A Mean Field Theory of Layer IV of Visual Cort...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>10-a-mean-field-theory-of-layer-iv-of-visual-c...</td>\n",
+              "      <td>Abstract Missing</td>\n",
+              "      <td>683\\n\\nA MEAN FIELD THEORY OF LAYER IV OF VISU...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>100</td>\n",
+              "      <td>1988</td>\n",
+              "      <td>Storing Covariance by the Associative Long-Ter...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>100-storing-covariance-by-the-associative-long...</td>\n",
+              "      <td>Abstract Missing</td>\n",
+              "      <td>394\\n\\nSTORING COVARIANCE BY THE ASSOCIATIVE\\n...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>1000</td>\n",
+              "      <td>1994</td>\n",
+              "      <td>Bayesian Query Construction for Neural Network...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>1000-bayesian-query-construction-for-neural-ne...</td>\n",
+              "      <td>Abstract Missing</td>\n",
+              "      <td>Bayesian Query Construction for Neural\\nNetwor...</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>1001</td>\n",
+              "      <td>1994</td>\n",
+              "      <td>Neural Network Ensembles, Cross Validation, an...</td>\n",
+              "      <td>NaN</td>\n",
+              "      <td>1001-neural-network-ensembles-cross-validation...</td>\n",
+              "      <td>Abstract Missing</td>\n",
+              "      <td>Neural Network Ensembles, Cross\\nValidation, a...</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>\n",
+              "      <button class=\"colab-df-convert\" onclick=\"convertToInteractive('df-519d686e-af7a-45b8-a809-21602476af0f')\"\n",
+              "              title=\"Convert this dataframe to an interactive table.\"\n",
+              "              style=\"display:none;\">\n",
+              "        \n",
+              "  <svg xmlns=\"http://www.w3.org/2000/svg\" height=\"24px\"viewBox=\"0 0 24 24\"\n",
+              "       width=\"24px\">\n",
+              "    <path d=\"M0 0h24v24H0V0z\" fill=\"none\"/>\n",
+              "    <path d=\"M18.56 5.44l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94zm-11 1L8.5 8.5l.94-2.06 2.06-.94-2.06-.94L8.5 2.5l-.94 2.06-2.06.94zm10 10l.94 2.06.94-2.06 2.06-.94-2.06-.94-.94-2.06-.94 2.06-2.06.94z\"/><path d=\"M17.41 7.96l-1.37-1.37c-.4-.4-.92-.59-1.43-.59-.52 0-1.04.2-1.43.59L10.3 9.45l-7.72 7.72c-.78.78-.78 2.05 0 2.83L4 21.41c.39.39.9.59 1.41.59.51 0 1.02-.2 1.41-.59l7.78-7.78 2.81-2.81c.8-.78.8-2.07 0-2.86zM5.41 20L4 18.59l7.72-7.72 1.47 1.35L5.41 20z\"/>\n",
+              "  </svg>\n",
+              "      </button>\n",
+              "      \n",
+              "  <style>\n",
+              "    .colab-df-container {\n",
+              "      display:flex;\n",
+              "      flex-wrap:wrap;\n",
+              "      gap: 12px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert {\n",
+              "      background-color: #E8F0FE;\n",
+              "      border: none;\n",
+              "      border-radius: 50%;\n",
+              "      cursor: pointer;\n",
+              "      display: none;\n",
+              "      fill: #1967D2;\n",
+              "      height: 32px;\n",
+              "      padding: 0 0 0 0;\n",
+              "      width: 32px;\n",
+              "    }\n",
+              "\n",
+              "    .colab-df-convert:hover {\n",
+              "      background-color: #E2EBFA;\n",
+              "      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);\n",
+              "      fill: #174EA6;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert {\n",
+              "      background-color: #3B4455;\n",
+              "      fill: #D2E3FC;\n",
+              "    }\n",
+              "\n",
+              "    [theme=dark] .colab-df-convert:hover {\n",
+              "      background-color: #434B5C;\n",
+              "      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);\n",
+              "      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));\n",
+              "      fill: #FFFFFF;\n",
+              "    }\n",
+              "  </style>\n",
+              "\n",
+              "      <script>\n",
+              "        const buttonEl =\n",
+              "          document.querySelector('#df-519d686e-af7a-45b8-a809-21602476af0f button.colab-df-convert');\n",
+              "        buttonEl.style.display =\n",
+              "          google.colab.kernel.accessAllowed ? 'block' : 'none';\n",
+              "\n",
+              "        async function convertToInteractive(key) {\n",
+              "          const element = document.querySelector('#df-519d686e-af7a-45b8-a809-21602476af0f');\n",
+              "          const dataTable =\n",
+              "            await google.colab.kernel.invokeFunction('convertToInteractive',\n",
+              "                                                     [key], {});\n",
+              "          if (!dataTable) return;\n",
+              "\n",
+              "          const docLinkHtml = 'Like what you see? Visit the ' +\n",
+              "            '<a target=\"_blank\" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'\n",
+              "            + ' to learn more about interactive tables.';\n",
+              "          element.innerHTML = '';\n",
+              "          dataTable['output_type'] = 'display_data';\n",
+              "          await google.colab.output.renderOutput(dataTable, element);\n",
+              "          const docLink = document.createElement('div');\n",
+              "          docLink.innerHTML = docLinkHtml;\n",
+              "          element.appendChild(docLink);\n",
+              "        }\n",
+              "      </script>\n",
+              "    </div>\n",
+              "  </div>\n",
+              "  "
+            ],
+            "text/plain": [
+              "     id  year                                              title event_type  \\\n",
+              "0     1  1987  Self-Organization of Associative Database and ...        NaN   \n",
+              "1    10  1987  A Mean Field Theory of Layer IV of Visual Cort...        NaN   \n",
+              "2   100  1988  Storing Covariance by the Associative Long-Ter...        NaN   \n",
+              "3  1000  1994  Bayesian Query Construction for Neural Network...        NaN   \n",
+              "4  1001  1994  Neural Network Ensembles, Cross Validation, an...        NaN   \n",
+              "\n",
+              "                                            pdf_name          abstract  \\\n",
+              "0  1-self-organization-of-associative-database-an...  Abstract Missing   \n",
+              "1  10-a-mean-field-theory-of-layer-iv-of-visual-c...  Abstract Missing   \n",
+              "2  100-storing-covariance-by-the-associative-long...  Abstract Missing   \n",
+              "3  1000-bayesian-query-construction-for-neural-ne...  Abstract Missing   \n",
+              "4  1001-neural-network-ensembles-cross-validation...  Abstract Missing   \n",
+              "\n",
+              "                                          paper_text  \n",
+              "0  767\\n\\nSELF-ORGANIZATION OF ASSOCIATIVE DATABA...  \n",
+              "1  683\\n\\nA MEAN FIELD THEORY OF LAYER IV OF VISU...  \n",
+              "2  394\\n\\nSTORING COVARIANCE BY THE ASSOCIATIVE\\n...  \n",
+              "3  Bayesian Query Construction for Neural\\nNetwor...  \n",
+              "4  Neural Network Ensembles, Cross\\nValidation, a...  "
+            ]
+          },
+          "execution_count": 4,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "data = pd.read_csv('/content/drive/MyDrive/papers.csv')\n",
+        "data.head()"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "DhUBzpCFls3l",
+        "outputId": "18732544-cbc4-4b66-aec5-44161b503e96"
+      },
+      "outputs": [
+        {
+          "data": {
+            "text/plain": [
+              "id            0\n",
+              "title         0\n",
+              "paper_text    0\n",
+              "dtype: int64"
+            ]
+          },
+          "execution_count": 5,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "data = data[['id','title','paper_text']]\n",
+        "data.isnull().sum()"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "f6Ee7UUbqlWr"
+      },
+      "outputs": [],
+      "source": [
+        "stuff_to_be_removed = list(stopwords.words('english')) + list(punctuation)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "Ua95YafYa2df"
+      },
+      "outputs": [],
+      "source": [
+        "new_words = ['this','model','loss','graph']\n",
+        "stuff_to_be_removed.extend(new_words)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "rm_wB5zwqHr2"
+      },
+      "outputs": [],
+      "source": [
+        "def preprocess(message):\n",
+        "    message = message.lower()\n",
+        "    #Remove links \n",
+        "    message = re.sub('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+#]|[!*\\(\\),]|'\\\n",
+        "                    '(?:%[0-9a-fA-F][0-9a-fA-F]))+','', message)\n",
+        "    # Remove extra spaces \n",
+        "    message = re.sub(' +', ' ', message)\n",
+        "    # Remove mentions \n",
+        "    message =re.sub(\"(@[A-Za-z0-9_]+)\",\"\", message)\n",
+        "    # Remove all non alphanumeric characters \n",
+        "    message = re.sub(\"^[A-Za-z0-9_-]*$\", \"\", message)\n",
+        "    # Remove stopwords and lemmatize\n",
+        "    lemmatizer = WordNetLemmatizer()\n",
+        "    message = ' '.join([lemmatizer.lemmatize(token) for token in message.split() if token not in stuff_to_be_removed and len(token)>=4])\n",
+        "    return message.split()"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "QGoUxxrWl3MS"
+      },
+      "outputs": [],
+      "source": [
+        "preprocessed_docs = data['paper_text'].apply(preprocess)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "988LlMcql_Gg"
+      },
+      "outputs": [],
+      "source": [
+        "dictionary = Dictionary(preprocessed_docs)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "a8zCg367mICy"
+      },
+      "source": [
+        "Using bag of words approach"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "v9cpMsfnmAk7"
+      },
+      "outputs": [],
+      "source": [
+        "corpus = [dictionary.doc2bow(doc) for doc in preprocessed_docs]"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "2_dkEJY0tLIe"
+      },
+      "source": [
+        "Using tf-idf approach"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "iR5kPJXImGrT"
+      },
+      "outputs": [],
+      "source": [
+        "tfidf = TfidfModel(corpus)\n",
+        "corpus_tfidf = tfidf[corpus]"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "4Dd3BHYdmQvT"
+      },
+      "outputs": [],
+      "source": [
+        "lda_model_tfidf = LdaMulticore(corpus_tfidf, num_topics=10, id2word=dictionary, passes=2, workers=4)"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "6K4913xOmS50",
+        "outputId": "9e6f46f6-87e8-43e3-e468-20fb2d065170"
+      },
+      "outputs": [
+        {
+          "name": "stdout",
+          "output_type": "stream",
+          "text": [
+            "Topic: 0 Word: 0.000*\"policy\" + 0.000*\"kernel\" + 0.000*\"network\" + 0.000*\"bound\" + 0.000*\"image\" + 0.000*\"node\" + 0.000*\"matrix\" + 0.000*\"training\" + 0.000*\"hidden\" + 0.000*\"theorem\"\n",
+            "\n",
+            "\n",
+            "Topic: 1 Word: 0.000*\"neuron\" + 0.000*\"image\" + 0.000*\"network\" + 0.000*\"spike\" + 0.000*\"synaptic\" + 0.000*\"cell\" + 0.000*\"kernel\" + 0.000*\"layer\" + 0.000*\"stimulus\" + 0.000*\"firing\"\n",
+            "\n",
+            "\n",
+            "Topic: 2 Word: 0.000*\"tensor\" + 0.000*\"network\" + 0.000*\"bound\" + 0.000*\"image\" + 0.000*\"kernel\" + 0.000*\"matrix\" + 0.000*\"node\" + 0.000*\"theorem\" + 0.000*\"training\" + 0.000*\"source\"\n",
+            "\n",
+            "\n",
+            "Topic: 3 Word: 0.000*\"image\" + 0.000*\"policy\" + 0.000*\"network\" + 0.000*\"spike\" + 0.000*\"kernel\" + 0.000*\"neuron\" + 0.000*\"clustering\" + 0.000*\"node\" + 0.000*\"training\" + 0.000*\"tree\"\n",
+            "\n",
+            "\n",
+            "Topic: 4 Word: 0.000*\"kernel\" + 0.000*\"image\" + 0.000*\"network\" + 0.000*\"bound\" + 0.000*\"neuron\" + 0.000*\"node\" + 0.000*\"training\" + 0.000*\"tree\" + 0.000*\"matrix\" + 0.000*\"object\"\n",
+            "\n",
+            "\n",
+            "Topic: 5 Word: 0.000*\"neuron\" + 0.000*\"spike\" + 0.000*\"image\" + 0.000*\"network\" + 0.000*\"policy\" + 0.000*\"node\" + 0.000*\"object\" + 0.000*\"state\" + 0.000*\"matrix\" + 0.000*\"regret\"\n",
+            "\n",
+            "\n",
+            "Topic: 6 Word: 0.000*\"kernel\" + 0.000*\"network\" + 0.000*\"neuron\" + 0.000*\"image\" + 0.000*\"node\" + 0.000*\"matrix\" + 0.000*\"training\" + 0.000*\"word\" + 0.000*\"bound\" + 0.000*\"cluster\"\n",
+            "\n",
+            "\n",
+            "Topic: 7 Word: 0.000*\"image\" + 0.000*\"policy\" + 0.000*\"kernel\" + 0.000*\"object\" + 0.000*\"regret\" + 0.000*\"network\" + 0.000*\"agent\" + 0.000*\"action\" + 0.000*\"neuron\" + 0.000*\"feature\"\n",
+            "\n",
+            "\n",
+            "Topic: 8 Word: 0.000*\"image\" + 0.000*\"network\" + 0.000*\"kernel\" + 0.000*\"word\" + 0.000*\"policy\" + 0.000*\"layer\" + 0.000*\"training\" + 0.000*\"object\" + 0.000*\"neuron\" + 0.000*\"spike\"\n",
+            "\n",
+            "\n",
+            "Topic: 9 Word: 0.000*\"image\" + 0.000*\"kernel\" + 0.000*\"cluster\" + 0.000*\"bound\" + 0.000*\"regret\" + 0.000*\"matrix\" + 0.000*\"object\" + 0.000*\"network\" + 0.000*\"classifier\" + 0.000*\"clustering\"\n",
+            "\n",
+            "\n"
+          ]
+        }
+      ],
+      "source": [
+        "for idx, topic in lda_model_tfidf.print_topics(-1):\n",
+        "    print('Topic: {} Word: {}'.format(idx, topic))\n",
+        "    print('\\n')"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "zmrRFDnYmUJ_"
+      },
+      "outputs": [],
+      "source": []
+    }
+  ],
+  "metadata": {
+    "colab": {
+      "collapsed_sections": [],
+      "name": "J022 NLP Assignment 2.ipynb",
+      "provenance": []
+    },
+    "kernelspec": {
+      "display_name": "Python 3",
+      "name": "python3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 0
+}
